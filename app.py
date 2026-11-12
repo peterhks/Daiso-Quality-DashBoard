@@ -37,8 +37,12 @@ uploaded_file = st.file_uploader("품질 관리 엑셀 파일(.xlsx, .xls)을 �
 
 if uploaded_file is not None:
     try:
-        # openpyxl 엔진을 명시하여 엑셀 파일 읽기
-        df = pd.read_excel(uploaded_file, engine='openpyxl')
+        # 파일 확장자에 따라 적절한 엔진 자동 선택 (.xls -> xlrd, .xlsx -> openpyxl)
+        file_name = uploaded_file.name.lower()
+        if file_name.endswith('.xls'):
+            df = pd.read_excel(uploaded_file, engine='xlrd')
+        else:
+            df = pd.read_excel(uploaded_file, engine='openpyxl')
         
         st.write("### 📋 업로드된 데이터 미리보기")
         st.dataframe(df.head(10), use_container_width=True)
