@@ -1,3 +1,14 @@
+from supabase import create_client, Client
+import streamlit as st
+
+# Streamlit Secrets(보안 설정)에서 Supabase 정보 불러오기
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase: Client = create_client(url, key)
+
+# 데이터 조회 예시
+# response = supabase.table("your_table_name").select("*").execute()
+
 import io
 import pandas as pd
 import plotly.express as px
