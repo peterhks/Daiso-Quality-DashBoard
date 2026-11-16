@@ -39,6 +39,70 @@ def wrap_header_2lines(text):
         return f"{t[:mid]}<br>{t[mid:]}"
     return t
 
+# 시험항목별 전문 품질 개선 솔루션 매칭 함수
+def get_improvement_guide(item_name):
+    guides = {
+        "땀견뢰도": {
+            "cause": "염색 후 수세(Soaping) 불충분으로 인한 미고착 잔류 염료 존재 및 고착제(Fixing Agent) 처리 미흡",
+            "action": "① 염색 완료 후 충분한 열탕 수세(Soaping) 공정 강화 ② 원단 소재(면·폴리에스터·혼방)에 적합한 전용 고착제(Fixing Agent) 후처리 적용 ③ 농색(Dark Color) 원단의 경우 승화 견뢰도가 우수한 염료로 교체"
+        },
+        "pH": {
+            "cause": "정련·표백·염색 공정에서 사용된 강산 또는 강알칼리(가성소다 등) 약품의 중화 및 수세 부족",
+            "action": "① 최종 수세 단계에서 유기산(초산·구연산 등)을 활용한 정확한 중화 공정(Neutralization) 실시 ② 건조 전 습윤 상태 원단의 간이 pH 체크리스트 의무화(중성 범위 pH 4.0~7.5 유지)"
+        },
+        "필링": {
+            "cause": "단섬유(Staple Fiber) 방적사의 꼬임(연수) 부족, 조직 밀도 저하 및 표면 마찰 저항성 미흡",
+            "action": "① 원사 연수(Twist) 상향 조정 및 코마사(Combed Yarn) 등 장섬유 비율 확대 ② 편직·제직 밀도(Gauge) 상향 설계 ③ 항필링(Anti-Pilling) 특수 유연제 후가공 및 모소(Singeing)·효소 감량 처리 병행"
+        },
+        "세탁견뢰도": {
+            "cause": "원단 섬유 조성과 맞지 않는 염료 선정, 열처리(열고정) 온도 미달 및 이염(Staining) 방지 처리 부족",
+            "action": "① 반응성 염료 또는 분산 염료의 고착 온도·시간 표준 준수 ② 배색 원단(흰색+농색) 조합 시 사전 이염 테스트 및 고착제 농도 상향 ③ 나일론·폴리 혼방 소재는 환원세정(Reduction Clearing) 필수 진행"
+        },
+        "마찰견뢰도": {
+            "cause": "원단 표면에 과도하게 잔류한 미고착 염료 및 나염(프린트) 바인더 경화 불량",
+            "action": "① 습마찰 및 건마찰 개선용 특수 실리콘·우레탄계 마찰견뢰도 증진제 패딩(Padding) 처리 ② 안료 나염 시 바인더 배합 비율 상향 및 큐어링(열경화) 온도·시간 엄수"
+        },
+        "세탁치수변화율": {
+            "cause": "편직·제직 및 텐터(Tenter) 가공 시 과도한 장력(Over-feeding 부족)으로 인한 잔류 응력 발생",
+            "action": "① 텐터 가공 시 오버피드(Over-feed) 비율을 높여 원단 수축 여유분 확보 ② 방축가공(Sanforizing) 또는 텀블 건조(Pre-shrinking) 공정 추가 ③ 재단 전 최소 24시간 이상 원단 자연 방치(Relaxation) 실시"
+        },
+        "일광견뢰도": {
+            "cause": "자외선(UV)에 취약한 형광증백제 또는 저견뢰도 염료 사용(특히 파스텔·형광·연한 색상)",
+            "action": "① 일광 견뢰도 등급(4급 이상)이 검증된 내광성 전용 염료로 처방 변경 ② 염색 후처리 단계에서 자외선 흡수제(UV Absorber) 동시 처리"
+        },
+        "폼알데하이드": {
+            "cause": "구김 방지(수지 가공), 나염 바인더, 접착 심지 및 포장재에서 유래한 잔류 유리 폼알데하이드",
+            "action": "① 논포르말린(Non-Formalin) 또는 초저포르말린 인증 수지·바인더·접착제 사용 ② 가공 후 열풍 건조 및 충분한 수세·환기 공정 거친 후 밀폐 포장"
+        },
+        "납(Pb) 함유량": {
+            "cause": "금속 부자재(단추·지퍼·리벳), PVC 코팅 원단, 도료(페인트) 및 안료 내 중금속 기준치 초과",
+            "action": "① 무연(Lead-Free) 인증을 받은 검증된 부자재 협력사 원료로 즉시 교체 ② 도금·코팅 전 원재료 단계에서 XRF(형광X선분석기) 사전 스크리닝 검사 의무화"
+        },
+        "굽힘강도": {
+            "cause": "제품 구조 설계상 하중 집중 부위의 두께 부족, 재질 강성 미달 및 사출 성형 조건 불량",
+            "action": "① 하중이 가해지는 연결부·프레임의 리브(Rib) 보강 설계 및 살두께 증대 ② 내충격성·강성이 우수한 엔지니어링 플라스틱 또는 고강도 합금 소재로 변경"
+        },
+        "손잡이와 대의 강도": {
+            "cause": "손잡이와 본체(대) 결합부의 용접·리벳·나사 체결 강도 부족 및 접합 면적 협소",
+            "action": "① 접합부 이중 리벳 체결 또는 용접 비드 두께 강화 ② 손잡이 삽입 깊이 연장 및 연결 브라켓 보강 구조 적용"
+        },
+        "손세탁 후 외관": {
+            "cause": "심지 박리, 부자재 탈락·변색, 봉제선 울음(Puckering) 및 원단 표면 보풀·변형 발생",
+            "action": "① 접착 심지 프레스 온도·압력·시간 표준화 및 세탁 내구성 테스트 ② 봉제 장력 완화 및 번수 조정으로 봉제선 울음 방지"
+        }
+    }
+    
+    # 정확히 일치하거나 핵심 키워드가 포함된 경우 매칭
+    for key, val in guides.items():
+        if key in item_name or item_name in key:
+            return val
+            
+    # 기본 가이드 (목록 외 신규 항목용)
+    return {
+        "cause": "원부자재 물성 기준 미달, 가공 공정 조건 편차 또는 완제품 출고 전 사전 품질 검증 누락",
+        "action": "① 불합격 로트(Lot) 즉시 격리 및 전수 선별 작업 실시 ② 원부자재 입고 단계 시험성적서(COA) 검증 강화 및 생산 공정 표준(SOP) 재정비"
+    }
+
 # 3. 사이드바
 with st.sidebar:
     st.title("⚙️ 데이터 업로드")
@@ -274,7 +338,7 @@ if uploaded_file is not None:
                 st.markdown("<br>", unsafe_allow_html=True)
                 
                 # ==========================================
-                # 1-4. 전체 신청업체 불합격 순위 및 사유별 상세 내역 (2줄 헤더 + 가로 스크롤 없는 전체 화면 테이블)
+                # 1-4. 전체 신청업체 불합격 순위 및 사유별 상세 내역
                 # ==========================================
                 st.markdown("#### 📋 전체 신청업체 불합격 순위 및 사유별 상세 내역")
                 
@@ -287,7 +351,6 @@ if uploaded_file is not None:
                 cross_tab = cross_tab[cols]
                 cross_tab_display = cross_tab.reset_index().rename(columns={company_col: '신청업체명'})
                 
-                # 커스텀 HTML 테이블 생성 (시험항목명 2줄 줄바꿈 및 화면 폭 맞춤)
                 html_table = """
                 <style>
                     .qa-full-table {
@@ -373,8 +436,47 @@ if uploaded_file is not None:
                     html_table += "</tr>"
                 
                 html_table += "</tbody></table></div>"
-                
                 st.markdown(html_table, unsafe_allow_html=True)
+
+                st.divider()
+
+                # ==========================================
+                # 1-5. 주요 불합격 빈도 순위(Top 10) 항목별 품질 개선 가이드
+                # ==========================================
+                st.markdown("### 🛠️ 주요 불합격 항목별 품질 개선 가이드 (Top 10 기준)")
+                st.markdown("<p style='color: #9CA3AF; font-size: 14px; margin-bottom: 20px;'>상위 불합격 빈도 순위에 집계된 시험항목별 주요 발생 원인 및 생산·공정 개선 대책입니다.</p>", unsafe_allow_html=True)
+                
+                guide_cards_html = '<div style="display: flex; flex-direction: column; gap: 14px;">'
+                
+                for i, row in top10_reasons.iterrows():
+                    item_name = row['불합격 항목']
+                    count = row['발생 건수']
+                    share = row['점유율(%)']
+                    guide = get_improvement_guide(item_name)
+                    badge_color = color_map.get(item_name, '#3B82F6')
+                    
+                    guide_cards_html += f"""
+                    <div style="background: #1F2937; border: 1px solid #374151; border-left: 6px solid {badge_color}; border-radius: 10px; padding: 18px 22px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 18px; font-weight: 800; color: #F9FAFB;">
+                                <span style="color: {badge_color}; margin-right: 6px;">{i+1}위.</span> {item_name}
+                            </div>
+                            <div style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700;">
+                                불합격 {count}건 ({share}%)
+                            </div>
+                        </div>
+                        <div style="font-size: 14px; color: #D1D5DB; margin-bottom: 6px; line-height: 1.5;">
+                            <strong style="color: #FBBF24;">▪ 주요 원인:</strong> {guide['cause']}
+                        </div>
+                        <div style="font-size: 14px; color: #E5E7EB; line-height: 1.6;">
+                            <strong style="color: #34D399;">▪ 개선 대책:</strong> {guide['action']}
+                        </div>
+                    </div>
+                    """
+                
+                guide_cards_html += '</div>'
+                st.markdown(guide_cards_html, unsafe_allow_html=True)
+
             else:
                 st.success("불합격 데이터가 존재하지 않습니다.")
 
