@@ -39,7 +39,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 if uploaded_file is not None:
     try:
-        # 데이터 읽기
         file_name = uploaded_file.name.lower()
         engine = 'xlrd' if file_name.endswith('.xls') else 'openpyxl'
         df = pd.read_excel(uploaded_file, engine=engine)
@@ -65,15 +64,10 @@ if uploaded_file is not None:
             .str.replace('일광견뢰도 : 제논아크법', '일광견뢰도', regex=False) \
             .str.replace('폼알데하이드 함유량=본원', '폼알데하이드', regex=False) \
             .str.replace('납(Pb) 함유량=본원', '납(Pb) 함유량', regex=False)
-
-        # 업체명 문자열 변환
         df_fail[company_col] = df_fail[company_col].astype(str)
 
         tab1, tab2, tab3 = st.tabs(["📊 1. 불합격 항목 분석", "🏢 2. 신청업체별 불합격 항목", "📋 3. 상세원본데이터"])
         
-        # ==========================================
-        # TAB 1: 불합격 항목 분석
-        # ==========================================
         with tab1:
             st.markdown(f"""
             <div style="display: flex; gap: 20px; margin-bottom: 40px;">
@@ -101,20 +95,20 @@ if uploaded_file is not None:
                 fail_summary.columns = ['불합격 항목', '발생 건수']
                 fail_summary['점유율(%)'] = (fail_summary['발생 건수'] / fail_count * 100).round(1)
 
-                # 5% 이하 '기타' 병합
+                # 5% 이하 '기타' 병합 및 정렬 (기타는 무조건 가장 마지막으로)
                 cond_others = fail_summary['점유율(%)'] <= 5.0
                 if cond_others.any():
                     others_count = fail_summary.loc[cond_others, '발생 건수'].sum()
                     fail_summary_pie = fail_summary[~cond_others].copy()
+                    fail_summary_pie = fail_summary_pie.sort_values('발생 건수', ascending=False)
                     others_df = pd.DataFrame([{'불합격 항목': '기타', '발생 건수': others_count, '점유율(%)': round((others_count/fail_count)*100, 1)}])
                     fail_summary_pie = pd.concat([fail_summary_pie, others_df], ignore_index=True)
                 else:
-                    fail_summary_pie = fail_summary.copy()
+                    fail_summary_pie = fail_summary.sort_values('발생 건수', ascending=False)
 
-                # 전문가용 프리미엄 커스텀 컬러 팔레트 (신뢰감, 가독성 최우선)
-                premium_colors = ['#1D4ED8', '#0369A1', '#0D9488', '#F59E0B', '#F97316', '#E11D48', '#8B5CF6', '#10B981', '#64748B', '#334155']
+                premium_colors = ['#1D4ED8', '#0369A1', '#0D9488', '#F59E0B', '#F97316', '#E11D48', '#8B5CF6', '#10B981', '#64748B', '#94A3B8']
 
-                # 1. 도넛 차트 (차트는 왼쪽, 범례는 우측 대형화)
+                # 1. 도넛 차트 (완전 왼쪽 정렬, 하단 범례)
                 fig_pie = px.pie(
                     fail_summary_pie, 
                     names='불합격 항목', 
@@ -126,25 +120,25 @@ if uploaded_file is not None:
                     textposition='inside', 
                     textinfo='percent+label',
                     textfont=dict(size=17, color='white', family="Arial Black"),
-                    marker=dict(line=dict(color='#FFFFFF', width=2.5))
+                    marker=dict(line=dict(color='#FFFFFF', width=2.5)),
+                    sort=False # ★ Plotly 자동 정렬을 끄고 데이터프레임 순서(기타가 마지막)를 강제 유지
                 )
                 fig_pie.update_layout(
-                    title=dict(text="📊 불합격 항목별 점유율 (5% 이하 기타 통합)", font=dict(size=22, color="#1F2937", family="Pretendard, sans-serif")),
+                    title=dict(text="📊 불합격 항목별 점유율", font=dict(size=22, color="#1F2937")),
                     legend=dict(
-                        orientation="v",      # 세로형 
-                        yanchor="middle", y=0.5, 
-                        xanchor="left", x=0.85, # 차트는 왼쪽으로 밀고 범례는 오른쪽에 배치
-                        font=dict(size=18, color="#374151", family="Pretendard, sans-serif"),
-                        title=dict(text="<b>세부 항목</b>", font=dict(size=18))
+                        orientation="h",       # 가로형
+                        yanchor="top", y=-0.1, # 차트 바로 아래
+                        xanchor="left", x=0,   # 완전 왼쪽부터 시작
+                        font=dict(size=16, color="#374151")
                     ),
-                    margin=dict(t=70, b=50, l=0, r=50), # 차트를 좌측으로 밀착
-                    height=550
+                    margin=dict(t=60, b=120, l=0, r=0), # ★ l=0으로 왼쪽 벽에 완전 밀착, b=120으로 하단 범례 2줄 공간 확보
+                    height=650
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
                 st.divider()
 
-                # 2. 바 차트 (색상을 신뢰감 있는 Teal 그라데이션으로 변경)
+                # 2. 바 차트 (색상 유지)
                 fig_bar = px.bar(
                     fail_summary.head(10).sort_values('발생 건수', ascending=True), 
                     x='발생 건수', 
@@ -152,14 +146,14 @@ if uploaded_file is not None:
                     orientation='h',
                     text='발생 건수',
                     color='발생 건수',
-                    color_continuous_scale=px.colors.sequential.Teal_r # 붉은색 -> 고급스러운 청록/블루 톤으로 변경
+                    color_continuous_scale=px.colors.sequential.Teal_r
                 )
                 fig_bar.update_traces(
                     textfont=dict(size=17, color="#1F2937", family="Arial Black"), 
                     textposition="outside"
                 )
                 fig_bar.update_layout(
-                    title=dict(text="📈 주요 불합격 빈도 순위 (Top 10)", font=dict(size=22, color="#1F2937", family="Pretendard, sans-serif")),
+                    title=dict(text="📈 주요 불합격 빈도 순위 (Top 10)", font=dict(size=22, color="#1F2937")),
                     xaxis_title="",
                     yaxis_title="",
                     yaxis=dict(tickfont=dict(size=16, color="#374151")),
@@ -169,9 +163,6 @@ if uploaded_file is not None:
                 )
                 st.plotly_chart(fig_bar, use_container_width=True)
 
-        # ==========================================
-        # TAB 2 & TAB 3 (이전 코드와 동일하게 유지)
-        # ==========================================
         with tab2:
             st.markdown("#### 🏢 신청업체별 불합격 발생 현황")
             if fail_count > 0:
