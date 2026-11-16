@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import textwrap
 from supabase import create_client, Client
 
 # 1. 페이지 기본 설정
@@ -22,6 +23,21 @@ def init_supabase():
         return None
 
 supabase = init_supabase()
+
+# 시험항목 헤더 2줄 줄바꿈 헬퍼 함수
+def wrap_header_2lines(text):
+    t = str(text).strip()
+    if t in ['신청업체명', '순위', '총 불합격 건수']:
+        if t == '총 불합격 건수':
+            return '총 불합격<br>건수'
+        return t
+    if ' ' in t:
+        parts = t.split(' ', 1)
+        return f"{parts[0]}<br>{parts[1]}"
+    if len(t) >= 5:
+        mid = (len(t) + 1) // 2
+        return f"{t[:mid]}<br>{t[mid:]}"
+    return t
 
 # 3. 사이드바
 with st.sidebar:
@@ -258,31 +274,107 @@ if uploaded_file is not None:
                 st.markdown("<br>", unsafe_allow_html=True)
                 
                 # ==========================================
-                # 1-4. 전체 업체 불합격 순위 및 사유별 상세 내역 (검색창 삭제, 전체 리스트 표시)
+                # 1-4. 전체 신청업체 불합격 순위 및 사유별 상세 내역 (2줄 헤더 + 가로 스크롤 없는 전체 화면 테이블)
                 # ==========================================
                 st.markdown("#### 📋 전체 신청업체 불합격 순위 및 사유별 상세 내역")
                 
-                # 업체별-사유별 교차표 생성 후 총 불합격 건수 기준 내림차순(등수순) 정렬
                 cross_tab = pd.crosstab(df_fail[company_col], df_fail[reason_col])
                 cross_tab['총 불합격 건수'] = cross_tab.sum(axis=1)
                 cross_tab = cross_tab.sort_values(by='총 불합격 건수', ascending=False)
                 
-                # 등수 컬럼 및 '총 불합격 건수'를 테이블 맨 앞으로 이동
                 cross_tab.insert(0, '순위', [f"{i+1}위" for i in range(len(cross_tab))])
                 cols = ['순위', '총 불합격 건수'] + [c for c in cross_tab.columns if c not in ['순위', '총 불합격 건수']]
                 cross_tab = cross_tab[cols]
-                
-                # 인덱스(업체명)를 일반 컬럼으로 변환하여 가독성 극대화
                 cross_tab_display = cross_tab.reset_index().rename(columns={company_col: '신청업체명'})
                 
-                # 전체 데이터가 한눈에 펼쳐지도록 높이를 항목 수에 맞춰 자동 계산
-                table_height = (len(cross_tab_display) + 1) * 35 + 10
-                st.dataframe(
-                    cross_tab_display, 
-                    use_container_width=True, 
-                    hide_index=True,
-                    height=table_height
-                )
+                # 커스텀 HTML 테이블 생성 (시험항목명 2줄 줄바꿈 및 화면 폭 맞춤)
+                html_table = """
+                <style>
+                    .qa-full-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        background-color: #111827;
+                        color: #F9FAFB;
+                        font-size: 13px;
+                        border: 1px solid #374151;
+                        table-layout: auto;
+                    }
+                    .qa-full-table th {
+                        background-color: #1F2937;
+                        color: #F3F4F6;
+                        font-weight: 700;
+                        padding: 10px 4px;
+                        border: 1px solid #374151;
+                        text-align: center;
+                        vertical-align: middle;
+                        line-height: 1.3;
+                        word-break: keep-all;
+                    }
+                    .qa-full-table td {
+                        padding: 8px 4px;
+                        border: 1px solid #374151;
+                        text-align: center;
+                        vertical-align: middle;
+                    }
+                    .qa-full-table td.comp-col {
+                        text-align: left;
+                        padding-left: 10px;
+                        font-weight: 600;
+                        white-space: nowrap;
+                    }
+                    .qa-full-table td.rank-col {
+                        font-weight: 700;
+                        color: #60A5FA;
+                        white-space: nowrap;
+                    }
+                    .qa-full-table td.total-col {
+                        font-weight: 800;
+                        color: #F87171;
+                        background-color: rgba(239, 68, 68, 0.08);
+                    }
+                    .qa-full-table tr:hover td {
+                        background-color: #1E293B;
+                    }
+                    .zero-val {
+                        color: #4B5563;
+                    }
+                    .nonzero-val {
+                        color: #F9FAFB;
+                        font-weight: 700;
+                    }
+                </style>
+                <div style="width: 100%;">
+                <table class="qa-full-table">
+                    <thead>
+                        <tr>
+                """
+                
+                for col in cross_tab_display.columns:
+                    wrapped_col = wrap_header_2lines(col)
+                    html_table += f"<th>{wrapped_col}</th>"
+                
+                html_table += "</tr></thead><tbody>"
+                
+                for _, row in cross_tab_display.iterrows():
+                    html_table += "<tr>"
+                    for col in cross_tab_display.columns:
+                        val = row[col]
+                        if col == '신청업체명':
+                            html_table += f"<td class='comp-col'>{val}</td>"
+                        elif col == '순위':
+                            html_table += f"<td class='rank-col'>{val}</td>"
+                        elif col == '총 불합격 건수':
+                            html_table += f"<td class='total-col'>{val}</td>"
+                        else:
+                            if val == 0:
+                                html_table += f"<td class='zero-val'>0</td>"
+                            else:
+                                html_table += f"<td class='nonzero-val'>{val}</td>"
+                    html_table += "</tr>"
+                
+                html_table += "</tbody></table></div>"
+                
+                st.markdown(html_table, unsafe_allow_html=True)
             else:
                 st.success("불합격 데이터가 존재하지 않습니다.")
 
