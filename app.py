@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import textwrap
 from supabase import create_client, Client
 
 # 1. 페이지 기본 설정
@@ -23,14 +22,6 @@ def init_supabase():
         return None
 
 supabase = init_supabase()
-
-# 긴 업체명 2줄 자동 줄바꿈 헬퍼 함수
-def wrap_company_name(name, width=14):
-    name_str = str(name).strip()
-    if len(name_str) > width:
-        lines = textwrap.wrap(name_str, width=width)
-        return "<br>".join(lines[:2]) + ("..." if len(lines) > 2 else "")
-    return name_str
 
 # 3. 사이드바
 with st.sidebar:
@@ -73,9 +64,9 @@ if uploaded_file is not None:
             .str.replace('일광견뢰도 : 제논아크법', '일광견뢰도', regex=False) \
             .str.replace('폼알데하이드 함유량=본원', '폼알데하이드', regex=False) \
             .str.replace('납(Pb) 함유량=본원', '납(Pb) 함유량', regex=False)
-        df_fail[company_col] = df_fail[company_col].astype(str)
+        df_fail[company_col] = df_fail[company_col].astype(str).str.strip()
 
-        # 메인 분석 탭과 원본 데이터 탭으로 깔끔하게 통합 구성
+        # 메인 분석 탭과 원본 데이터 탭
         tab1, tab2 = st.tabs(["📊 1. 불합격 종합 분석 (항목 및 업체별)", "📋 2. 상세원본데이터"])
         
         with tab1:
@@ -170,10 +161,7 @@ if uploaded_file is not None:
                 st.markdown("### 📈 주요 불합격 빈도 순위 (1위 ~ 10위)")
                 
                 top10_reasons = fail_summary.head(10).sort_values('발생 건수', ascending=False).reset_index(drop=True)
-                # 1번부터 10번까지 명확히 순위 넘버링 부여
                 top10_reasons['순위_항목'] = [f"{i+1}. {row['불합격 항목']}" for i, row in top10_reasons.iterrows()]
-                
-                # 색상 매칭을 위해 순위_항목 기준 컬러맵 생성
                 bar_color_map = {f"{i+1}. {row['불합격 항목']}": color_map.get(row['불합격 항목'], '#3B82F6') for i, row in top10_reasons.iterrows()}
                 
                 fig_bar = px.bar(
@@ -198,7 +186,7 @@ if uploaded_file is not None:
                     yaxis_title="",
                     yaxis=dict(
                         categoryorder="array",
-                        categoryarray=top10_reasons['순위_항목'].tolist()[::-1], # ★ 1번이 맨 위, 10번이 맨 아래 오도록 강제 고정
+                        categoryarray=top10_reasons['순위_항목'].tolist()[::-1],
                         tickfont=dict(size=18, color="#F9FAFB")
                     ),
                     margin=dict(t=20, b=20, l=10, r=60),
@@ -209,31 +197,43 @@ if uploaded_file is not None:
                 st.divider()
 
                 # ==========================================
-                # 1-3. 신청업체별 불합격 항목 (하단 통합 + Top 10 도너츠 + 2줄 줄바꿈)
+                # 1-3. 신청업체별 불합격 발생 현황 (상위 6개 업체 + 나머지 '기타' 통합, 1줄 표시)
                 # ==========================================
-                st.markdown("### 🏢 신청업체별 불합격 발생 현황 (Top 10)")
+                st.markdown("### 🏢 신청업체별 불합격 발생 현황 (Top 6 및 기타)")
                 
                 company_fails = df_fail.groupby(company_col).size().reset_index(name='불합격 건수')
                 company_fails = company_fails.sort_values('불합격 건수', ascending=False).reset_index(drop=True)
                 
-                top10_comp = company_fails.head(10).copy()
-                # 긴 업체명 2줄 자동 줄바꿈 적용
-                top10_comp['표시_업체명'] = top10_comp[company_col].apply(lambda x: wrap_company_name(x, width=14))
+                # 상위 6개 업체 추출 및 나머지 업체 '기타'로 통합
+                if len(company_fails) > 6:
+                    top6_comp = company_fails.iloc[:6].copy()
+                    others_comp_count = company_fails.iloc[6:]['불합격 건수'].sum()
+                    others_comp_df = pd.DataFrame([{company_col: '기타', '불합격 건수': others_comp_count}])
+                    comp_pie_df = pd.concat([top6_comp, others_comp_df], ignore_index=True)
+                else:
+                    comp_pie_df = company_fails.copy()
+
+                # 업체별 컬러맵 생성 ('기타'는 짙은 회색)
+                comp_unique = comp_pie_df[company_col].tolist()
+                comp_color_map = {comp: premium_colors[i % len(premium_colors)] for i, comp in enumerate(comp_unique) if comp != '기타'}
+                comp_color_map['기타'] = '#4B5563'
                 
-                col_left2, _ = st.columns([2.2, 0.8])
+                # 긴 1줄 업체명이 우측에서 잘리지 않도록 충분히 넓은 공간(r=320) 확보
+                col_left2, _ = st.columns([2.5, 0.5])
                 
                 with col_left2:
                     fig_comp_pie = px.pie(
-                        top10_comp,
-                        names='표시_업체명',
+                        comp_pie_df,
+                        names=company_col,
                         values='불합격 건수',
                         hole=0.5,
-                        color_discrete_sequence=premium_colors
+                        color=company_col,
+                        color_discrete_map=comp_color_map
                     )
                     fig_comp_pie.update_traces(
                         textposition='inside',
-                        textinfo='percent+value', # 도너츠 안에는 깔끔하게 비율과 건수 표시
-                        textfont=dict(size=16, color='white', family="Arial Black"),
+                        textinfo='percent+value',
+                        textfont=dict(size=17, color='white', family="Arial Black"),
                         marker=dict(line=dict(color='#0E1117', width=2)),
                         sort=False
                     )
@@ -242,17 +242,16 @@ if uploaded_file is not None:
                         paper_bgcolor='rgba(0,0,0,0)',
                         plot_bgcolor='rgba(0,0,0,0)',
                         title=None,
-                        # ★ 도너츠 오른쪽에 2줄 처리된 업체명 세로 배치
                         legend=dict(
                             orientation="v",
                             yanchor="middle", y=0.5,
                             xanchor="left", x=1.02,
-                            font=dict(size=18, color="#F9FAFB"),
+                            font=dict(size=20, color="#F9FAFB"),
                             itemsizing="constant",
                             tracegroupgap=12
                         ),
-                        margin=dict(t=20, b=20, l=0, r=240),
-                        height=620
+                        margin=dict(t=20, b=20, l=0, r=320),
+                        height=600
                     )
                     st.plotly_chart(fig_comp_pie, use_container_width=True)
 
