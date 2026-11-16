@@ -11,6 +11,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# --- ★ 다크 모드 강제 적용 CSS ---
+st.markdown("""
+<style>
+    /* 전체 배경을 블랙/다크 그레이 톤으로 변경 */
+    .stApp {
+        background-color: #0E1117;
+        color: #F9FAFB;
+    }
+    /* 탭 메뉴 및 기본 텍스트 색상 변경 */
+    .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, p, label {
+        color: #F9FAFB !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # 2. Supabase 연결 설정
 @st.cache_resource
 def init_supabase():
@@ -23,7 +38,7 @@ def init_supabase():
 
 supabase = init_supabase()
 
-# 3. 사이드바 - 파일 업로드
+# 3. 사이드바
 with st.sidebar:
     st.title("⚙️ 데이터 업로드")
     uploaded_file = st.file_uploader("검사 결과 엑셀 (.xlsx, .xls)", type=["xlsx", "xls"])
@@ -33,7 +48,7 @@ with st.sidebar:
     else:
         st.success("🟢 Supabase 연동 완료")
 
-# 4. 메인 대시보드 타이틀
+# 4. 메인 타이틀
 st.title("📦 다이소 협력사 품질(QA) 통합 대시보드")
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -69,22 +84,23 @@ if uploaded_file is not None:
         tab1, tab2, tab3 = st.tabs(["📊 1. 불합격 항목 분석", "🏢 2. 신청업체별 불합격 항목", "📋 3. 상세원본데이터"])
         
         with tab1:
+            # 다크 모드용 KPI 카드 스타일
             st.markdown(f"""
             <div style="display: flex; gap: 20px; margin-bottom: 40px;">
-                <div style="flex: 1; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 6px solid #1E3A8A;">
-                    <div style="color: #6B7280; font-size: 15px; font-weight: 700; margin-bottom: 8px;">총 검사 진행 건수</div>
-                    <div style="color: #111827; font-size: 32px; font-weight: 900;">{total_rows:,} <span style="font-size: 16px; font-weight: normal; color: #6B7280;">건</span></div>
+                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #3B82F6;">
+                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">총 검사 진행 건수</div>
+                    <div style="color: #F9FAFB; font-size: 32px; font-weight: 900;">{total_rows:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
                 </div>
-                <div style="flex: 1; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 6px solid #10B981;">
-                    <div style="color: #6B7280; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 합격 건수</div>
-                    <div style="color: #10B981; font-size: 32px; font-weight: 900;">{pass_count:,} <span style="font-size: 16px; font-weight: normal; color: #6B7280;">건</span></div>
+                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #10B981;">
+                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 합격 건수</div>
+                    <div style="color: #10B981; font-size: 32px; font-weight: 900;">{pass_count:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
                 </div>
-                <div style="flex: 1; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 6px solid #EF4444;">
-                    <div style="color: #6B7280; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 불합격 건수</div>
-                    <div style="color: #EF4444; font-size: 32px; font-weight: 900;">{fail_count:,} <span style="font-size: 16px; font-weight: normal; color: #6B7280;">건</span></div>
+                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #EF4444;">
+                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 불합격 건수</div>
+                    <div style="color: #EF4444; font-size: 32px; font-weight: 900;">{fail_count:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
                 </div>
-                <div style="flex: 1; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 6px solid #8B5CF6;">
-                    <div style="color: #6B7280; font-size: 15px; font-weight: 700; margin-bottom: 8px;">종합 불합격률(Defect Rate)</div>
+                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #8B5CF6;">
+                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">종합 불합격률(Defect Rate)</div>
                     <div style="color: #8B5CF6; font-size: 32px; font-weight: 900;">{fail_rate:.1f}%</div>
                 </div>
             </div>
@@ -106,59 +122,76 @@ if uploaded_file is not None:
                 else:
                     fail_summary_pie = fail_summary.sort_values('발생 건수', ascending=False)
 
-                premium_colors = ['#1D4ED8', '#0369A1', '#0D9488', '#F59E0B', '#F97316', '#E11D48', '#8B5CF6', '#10B981', '#64748B', '#94A3B8']
+                # --- ★ 동일 색상 매칭을 위한 Color Map 생성 ---
+                premium_colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316', '#14B8A6']
+                unique_items = fail_summary_pie['불합격 항목'].tolist()
+                color_map = {item: premium_colors[i % len(premium_colors)] for i, item in enumerate(unique_items) if item != '기타'}
+                color_map['기타'] = '#4B5563' # 기타는 다크 모드에 어울리는 짙은 회색 지정
 
-                # 1. 도넛 차트 (완전 왼쪽 정렬, 하단 범례)
-                fig_pie = px.pie(
-                    fail_summary_pie, 
-                    names='불합격 항목', 
-                    values='발생 건수', 
-                    hole=0.5,
-                    color_discrete_sequence=premium_colors
-                )
-                fig_pie.update_traces(
-                    textposition='inside', 
-                    textinfo='percent+label',
-                    textfont=dict(size=17, color='white', family="Arial Black"),
-                    marker=dict(line=dict(color='#FFFFFF', width=2.5)),
-                    sort=False # ★ Plotly 자동 정렬을 끄고 데이터프레임 순서(기타가 마지막)를 강제 유지
-                )
-                fig_pie.update_layout(
-                    title=dict(text="📊 불합격 항목별 점유율", font=dict(size=22, color="#1F2937")),
-                    legend=dict(
-                        orientation="h",       # 가로형
-                        yanchor="top", y=-0.1, # 차트 바로 아래
-                        xanchor="left", x=0,   # 완전 왼쪽부터 시작
-                        font=dict(size=16, color="#374151")
-                    ),
-                    margin=dict(t=60, b=120, l=0, r=0), # ★ l=0으로 왼쪽 벽에 완전 밀착, b=120으로 하단 범례 2줄 공간 확보
-                    height=650
-                )
-                st.plotly_chart(fig_pie, use_container_width=True)
+                st.markdown("### 📊 불합격 항목별 점유율")
+                
+                # ★ 도너츠 차트를 완전 왼쪽으로 밀착시키기 위해 컬럼 분할 (좌측 60%, 우측 여백 40%)
+                col_left, col_right = st.columns([1.5, 1])
+                
+                with col_left:
+                    fig_pie = px.pie(
+                        fail_summary_pie, 
+                        names='불합격 항목', 
+                        values='발생 건수', 
+                        hole=0.5,
+                        color='불합격 항목',         # 색상 매칭 기준
+                        color_discrete_map=color_map  # 매칭된 컬러맵 적용
+                    )
+                    fig_pie.update_traces(
+                        textposition='inside', 
+                        textinfo='percent+label',
+                        textfont=dict(size=18, color='white', family="Arial Black"),
+                        marker=dict(line=dict(color='#0E1117', width=2)), # 다크 테두리
+                        sort=False 
+                    )
+                    fig_pie.update_layout(
+                        template='plotly_dark',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        title=None, # 타이틀은 st.markdown으로 위로 뺌
+                        legend=dict(
+                            orientation="h",       
+                            yanchor="top", y=-0.1, 
+                            xanchor="left", x=0,   
+                            font=dict(size=24, color="#F9FAFB") # ★ 범례 글씨 크기 2배 이상 대폭 확대
+                        ),
+                        margin=dict(t=10, b=120, l=0, r=0), 
+                        height=600
+                    )
+                    st.plotly_chart(fig_pie, use_container_width=True)
 
                 st.divider()
 
-                # 2. 바 차트 (색상 유지)
+                # 2. 바 차트 (도너츠와 100% 동일한 색상 적용)
+                st.markdown("### 📈 주요 불합격 빈도 순위 (Top 10)")
+                
                 fig_bar = px.bar(
                     fail_summary.head(10).sort_values('발생 건수', ascending=True), 
                     x='발생 건수', 
                     y='불합격 항목', 
                     orientation='h',
                     text='발생 건수',
-                    color='발생 건수',
-                    color_continuous_scale=px.colors.sequential.Teal_r
+                    color='불합격 항목',          # ★ 도너츠와 동일한 기준
+                    color_discrete_map=color_map   # ★ 도너츠와 동일한 컬러맵 강제 적용
                 )
                 fig_bar.update_traces(
-                    textfont=dict(size=17, color="#1F2937", family="Arial Black"), 
+                    textfont=dict(size=18, color="#F9FAFB", family="Arial Black"), 
                     textposition="outside"
                 )
                 fig_bar.update_layout(
-                    title=dict(text="📈 주요 불합격 빈도 순위 (Top 10)", font=dict(size=22, color="#1F2937")),
+                    template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    showlegend=False, # 바 차트에서는 항목에 텍스트가 있으므로 범례 숨김
                     xaxis_title="",
                     yaxis_title="",
-                    yaxis=dict(tickfont=dict(size=16, color="#374151")),
-                    coloraxis_showscale=False,
-                    margin=dict(t=70, b=20, l=20, r=40),
+                    yaxis=dict(tickfont=dict(size=18, color="#F9FAFB")),
+                    margin=dict(t=20, b=20, l=10, r=40),
                     height=600
                 )
                 st.plotly_chart(fig_bar, use_container_width=True)
@@ -180,11 +213,14 @@ if uploaded_file is not None:
                     color='불합격 건수',
                     color_continuous_scale='Blues'
                 )
-                fig_comp.update_traces(textposition='outside', textfont=dict(size=16, family="Arial Black"))
+                fig_comp.update_traces(textposition='outside', textfont=dict(size=18, color='#F9FAFB', family="Arial Black"))
                 fig_comp.update_layout(
+                    template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
                     xaxis_title="", 
                     yaxis_title="불합격 발생 건수",
-                    xaxis=dict(tickfont=dict(size=15)),
+                    xaxis=dict(tickfont=dict(size=16, color="#F9FAFB")),
                     coloraxis_showscale=False,
                     margin=dict(t=30, b=20, l=20, r=20),
                     height=500
@@ -211,6 +247,7 @@ if uploaded_file is not None:
 
         with tab3:
             st.markdown("#### 📂 엑셀 원본 전체 데이터")
+            # 다크 모드 테이블 적용
             st.dataframe(df, use_container_width=True, height=700)
 
     except Exception as e:
