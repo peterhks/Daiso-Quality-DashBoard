@@ -197,7 +197,7 @@ if uploaded_file is not None:
                 st.divider()
 
                 # ==========================================
-                # 1-3. 신청업체별 불합격 발생 현황 (도넛 내부: 첫 단어 + %, 우측 범례: 전체 업체명)
+                # 1-3. 신청업체별 불합격 발생 현황 (도넛 차트)
                 # ==========================================
                 st.markdown("### 🏢 신청업체별 불합격 발생 현황 (Top 6 및 기타)")
                 
@@ -212,7 +212,6 @@ if uploaded_file is not None:
                 else:
                     comp_pie_df = company_fails.copy()
 
-                # ★ 업체 명칭의 첫 번째 띄어쓰기 전 단어만 추출
                 comp_pie_df['도넛_라벨'] = comp_pie_df[company_col].apply(lambda x: str(x).split()[0] if str(x).strip() else str(x))
 
                 comp_unique = comp_pie_df[company_col].tolist()
@@ -229,11 +228,10 @@ if uploaded_file is not None:
                         hole=0.5,
                         color=company_col,
                         color_discrete_map=comp_color_map,
-                        custom_data=['도넛_라벨'] # 첫 단어 데이터 전달
+                        custom_data=['도넛_라벨']
                     )
                     fig_comp_pie.update_traces(
                         textposition='inside',
-                        # ★ 도넛 내부에 첫 번째 단어와 퍼센트를 줄바꿈하여 표시
                         texttemplate='%{customdata[0]}<br>%{percent}',
                         textfont=dict(size=16, color='white', family="Arial Black"),
                         marker=dict(line=dict(color='#0E1117', width=2)),
@@ -258,19 +256,33 @@ if uploaded_file is not None:
                     st.plotly_chart(fig_comp_pie, use_container_width=True)
 
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown("#### 🔍 업체명 검색 및 사유별 상세 내역")
-                search_term = st.text_input("찾으시는 업체명을 입력하세요 (일부만 입력해도 검색됩니다) 🔎", "")
                 
-                if search_term:
-                    filtered_df = df_fail[df_fail[company_col].str.contains(search_term, case=False, na=False)]
-                else:
-                    filtered_df = df_fail
+                # ==========================================
+                # 1-4. 전체 업체 불합격 순위 및 사유별 상세 내역 (검색창 삭제, 전체 리스트 표시)
+                # ==========================================
+                st.markdown("#### 📋 전체 신청업체 불합격 순위 및 사유별 상세 내역")
                 
-                if not filtered_df.empty:
-                    cross_tab = pd.crosstab(filtered_df[company_col], filtered_df[reason_col], margins=True, margins_name="총계")
-                    st.dataframe(cross_tab, use_container_width=True)
-                else:
-                    st.warning("해당 이름으로 검색된 업체가 없습니다. 다시 입력해 주세요.")
+                # 업체별-사유별 교차표 생성 후 총 불합격 건수 기준 내림차순(등수순) 정렬
+                cross_tab = pd.crosstab(df_fail[company_col], df_fail[reason_col])
+                cross_tab['총 불합격 건수'] = cross_tab.sum(axis=1)
+                cross_tab = cross_tab.sort_values(by='총 불합격 건수', ascending=False)
+                
+                # 등수 컬럼 및 '총 불합격 건수'를 테이블 맨 앞으로 이동
+                cross_tab.insert(0, '순위', [f"{i+1}위" for i in range(len(cross_tab))])
+                cols = ['순위', '총 불합격 건수'] + [c for c in cross_tab.columns if c not in ['순위', '총 불합격 건수']]
+                cross_tab = cross_tab[cols]
+                
+                # 인덱스(업체명)를 일반 컬럼으로 변환하여 가독성 극대화
+                cross_tab_display = cross_tab.reset_index().rename(columns={company_col: '신청업체명'})
+                
+                # 전체 데이터가 한눈에 펼쳐지도록 높이를 항목 수에 맞춰 자동 계산
+                table_height = (len(cross_tab_display) + 1) * 35 + 10
+                st.dataframe(
+                    cross_tab_display, 
+                    use_container_width=True, 
+                    hide_index=True,
+                    height=table_height
+                )
             else:
                 st.success("불합격 데이터가 존재하지 않습니다.")
 
