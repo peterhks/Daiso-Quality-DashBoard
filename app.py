@@ -197,14 +197,13 @@ if uploaded_file is not None:
                 st.divider()
 
                 # ==========================================
-                # 1-3. 신청업체별 불합격 발생 현황 (상위 6개 업체 + 나머지 '기타' 통합, 1줄 표시)
+                # 1-3. 신청업체별 불합격 발생 현황 (도넛 내부: 첫 단어 + %, 우측 범례: 전체 업체명)
                 # ==========================================
                 st.markdown("### 🏢 신청업체별 불합격 발생 현황 (Top 6 및 기타)")
                 
                 company_fails = df_fail.groupby(company_col).size().reset_index(name='불합격 건수')
                 company_fails = company_fails.sort_values('불합격 건수', ascending=False).reset_index(drop=True)
                 
-                # 상위 6개 업체 추출 및 나머지 업체 '기타'로 통합
                 if len(company_fails) > 6:
                     top6_comp = company_fails.iloc[:6].copy()
                     others_comp_count = company_fails.iloc[6:]['불합격 건수'].sum()
@@ -213,12 +212,13 @@ if uploaded_file is not None:
                 else:
                     comp_pie_df = company_fails.copy()
 
-                # 업체별 컬러맵 생성 ('기타'는 짙은 회색)
+                # ★ 업체 명칭의 첫 번째 띄어쓰기 전 단어만 추출
+                comp_pie_df['도넛_라벨'] = comp_pie_df[company_col].apply(lambda x: str(x).split()[0] if str(x).strip() else str(x))
+
                 comp_unique = comp_pie_df[company_col].tolist()
                 comp_color_map = {comp: premium_colors[i % len(premium_colors)] for i, comp in enumerate(comp_unique) if comp != '기타'}
                 comp_color_map['기타'] = '#4B5563'
                 
-                # 긴 1줄 업체명이 우측에서 잘리지 않도록 충분히 넓은 공간(r=320) 확보
                 col_left2, _ = st.columns([2.5, 0.5])
                 
                 with col_left2:
@@ -228,12 +228,14 @@ if uploaded_file is not None:
                         values='불합격 건수',
                         hole=0.5,
                         color=company_col,
-                        color_discrete_map=comp_color_map
+                        color_discrete_map=comp_color_map,
+                        custom_data=['도넛_라벨'] # 첫 단어 데이터 전달
                     )
                     fig_comp_pie.update_traces(
                         textposition='inside',
-                        textinfo='percent+value',
-                        textfont=dict(size=17, color='white', family="Arial Black"),
+                        # ★ 도넛 내부에 첫 번째 단어와 퍼센트를 줄바꿈하여 표시
+                        texttemplate='%{customdata[0]}<br>%{percent}',
+                        textfont=dict(size=16, color='white', family="Arial Black"),
                         marker=dict(line=dict(color='#0E1117', width=2)),
                         sort=False
                     )
