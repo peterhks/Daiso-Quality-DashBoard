@@ -92,12 +92,10 @@ def get_improvement_guide(item_name):
         }
     }
     
-    # 정확히 일치하거나 핵심 키워드가 포함된 경우 매칭
     for key, val in guides.items():
         if key in item_name or item_name in key:
             return val
             
-    # 기본 가이드 (목록 외 신규 항목용)
     return {
         "cause": "원부자재 물성 기준 미달, 가공 공정 조건 편차 또는 완제품 출고 전 사전 품질 검증 누락",
         "action": "① 불합격 로트(Lot) 즉시 격리 및 전수 선별 작업 실시 ② 원부자재 입고 단계 시험성적서(COA) 검증 강화 및 생산 공정 표준(SOP) 재정비"
@@ -152,25 +150,25 @@ if uploaded_file is not None:
         with tab1:
             # --- 상단 KPI 카드 ---
             st.markdown(f"""
-            <div style="display: flex; gap: 20px; margin-bottom: 40px;">
-                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #3B82F6;">
-                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">총 검사 진행 건수</div>
-                    <div style="color: #F9FAFB; font-size: 32px; font-weight: 900;">{total_rows:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
-                </div>
-                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #10B981;">
-                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 합격 건수</div>
-                    <div style="color: #10B981; font-size: 32px; font-weight: 900;">{pass_count:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
-                </div>
-                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #EF4444;">
-                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 불합격 건수</div>
-                    <div style="color: #EF4444; font-size: 32px; font-weight: 900;">{fail_count:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
-                </div>
-                <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #8B5CF6;">
-                    <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">종합 불합격률(Defect Rate)</div>
-                    <div style="color: #8B5CF6; font-size: 32px; font-weight: 900;">{fail_rate:.1f}%</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+<div style="display: flex; gap: 20px; margin-bottom: 40px;">
+    <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #3B82F6;">
+        <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">총 검사 진행 건수</div>
+        <div style="color: #F9FAFB; font-size: 32px; font-weight: 900;">{total_rows:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
+    </div>
+    <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #10B981;">
+        <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 합격 건수</div>
+        <div style="color: #10B981; font-size: 32px; font-weight: 900;">{pass_count:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
+    </div>
+    <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #EF4444;">
+        <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">최종 불합격 건수</div>
+        <div style="color: #EF4444; font-size: 32px; font-weight: 900;">{fail_count:,} <span style="font-size: 16px; font-weight: normal; color: #9CA3AF;">건</span></div>
+    </div>
+    <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #8B5CF6;">
+        <div style="color: #9CA3AF; font-size: 15px; font-weight: 700; margin-bottom: 8px;">종합 불합격률(Defect Rate)</div>
+        <div style="color: #8B5CF6; font-size: 32px; font-weight: 900;">{fail_rate:.1f}%</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
             if fail_count > 0:
                 fail_summary = df_fail[reason_col].value_counts().reset_index()
@@ -352,66 +350,64 @@ if uploaded_file is not None:
                 cross_tab_display = cross_tab.reset_index().rename(columns={company_col: '신청업체명'})
                 
                 html_table = """
-                <style>
-                    .qa-full-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        background-color: #111827;
-                        color: #F9FAFB;
-                        font-size: 13px;
-                        border: 1px solid #374151;
-                        table-layout: auto;
-                    }
-                    .qa-full-table th {
-                        background-color: #1F2937;
-                        color: #F3F4F6;
-                        font-weight: 700;
-                        padding: 10px 4px;
-                        border: 1px solid #374151;
-                        text-align: center;
-                        vertical-align: middle;
-                        line-height: 1.3;
-                        word-break: keep-all;
-                    }
-                    .qa-full-table td {
-                        padding: 8px 4px;
-                        border: 1px solid #374151;
-                        text-align: center;
-                        vertical-align: middle;
-                    }
-                    .qa-full-table td.comp-col {
-                        text-align: left;
-                        padding-left: 10px;
-                        font-weight: 600;
-                        white-space: nowrap;
-                    }
-                    .qa-full-table td.rank-col {
-                        font-weight: 700;
-                        color: #60A5FA;
-                        white-space: nowrap;
-                    }
-                    .qa-full-table td.total-col {
-                        font-weight: 800;
-                        color: #F87171;
-                        background-color: rgba(239, 68, 68, 0.08);
-                    }
-                    .qa-full-table tr:hover td {
-                        background-color: #1E293B;
-                    }
-                    .zero-val {
-                        color: #4B5563;
-                    }
-                    .nonzero-val {
-                        color: #F9FAFB;
-                        font-weight: 700;
-                    }
-                </style>
-                <div style="width: 100%;">
-                <table class="qa-full-table">
-                    <thead>
-                        <tr>
-                """
-                
+<style>
+    .qa-full-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #111827;
+        color: #F9FAFB;
+        font-size: 13px;
+        border: 1px solid #374151;
+        table-layout: auto;
+    }
+    .qa-full-table th {
+        background-color: #1F2937;
+        color: #F3F4F6;
+        font-weight: 700;
+        padding: 10px 4px;
+        border: 1px solid #374151;
+        text-align: center;
+        vertical-align: middle;
+        line-height: 1.3;
+        word-break: keep-all;
+    }
+    .qa-full-table td {
+        padding: 8px 4px;
+        border: 1px solid #374151;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .qa-full-table td.comp-col {
+        text-align: left;
+        padding-left: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .qa-full-table td.rank-col {
+        font-weight: 700;
+        color: #60A5FA;
+        white-space: nowrap;
+    }
+    .qa-full-table td.total-col {
+        font-weight: 800;
+        color: #F87171;
+        background-color: rgba(239, 68, 68, 0.08);
+    }
+    .qa-full-table tr:hover td {
+        background-color: #1E293B;
+    }
+    .zero-val {
+        color: #4B5563;
+    }
+    .nonzero-val {
+        color: #F9FAFB;
+        font-weight: 700;
+    }
+</style>
+<div style="width: 100%;">
+<table class="qa-full-table">
+<thead><tr>
+"""
                 for col in cross_tab_display.columns:
                     wrapped_col = wrap_header_2lines(col)
                     html_table += f"<th>{wrapped_col}</th>"
@@ -430,7 +426,7 @@ if uploaded_file is not None:
                             html_table += f"<td class='total-col'>{val}</td>"
                         else:
                             if val == 0:
-                                html_table += f"<td class='zero-val'>0</td>"
+                                html_table += "<td class='zero-val'>0</td>"
                             else:
                                 html_table += f"<td class='nonzero-val'>{val}</td>"
                     html_table += "</tr>"
@@ -441,12 +437,10 @@ if uploaded_file is not None:
                 st.divider()
 
                 # ==========================================
-                # 1-5. 주요 불합격 빈도 순위(Top 10) 항목별 품질 개선 가이드
+                # 1-5. 주요 불합격 빈도 순위(Top 10) 항목별 품질 개선 가이드 (들여쓰기 제거 버전)
                 # ==========================================
                 st.markdown("### 🛠️ 주요 불합격 항목별 품질 개선 가이드 (Top 10 기준)")
                 st.markdown("<p style='color: #9CA3AF; font-size: 14px; margin-bottom: 20px;'>상위 불합격 빈도 순위에 집계된 시험항목별 주요 발생 원인 및 생산·공정 개선 대책입니다.</p>", unsafe_allow_html=True)
-                
-                guide_cards_html = '<div style="display: flex; flex-direction: column; gap: 14px;">'
                 
                 for i, row in top10_reasons.iterrows():
                     item_name = row['불합격 항목']
@@ -455,27 +449,22 @@ if uploaded_file is not None:
                     guide = get_improvement_guide(item_name)
                     badge_color = color_map.get(item_name, '#3B82F6')
                     
-                    guide_cards_html += f"""
-                    <div style="background: #1F2937; border: 1px solid #374151; border-left: 6px solid {badge_color}; border-radius: 10px; padding: 18px 22px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div style="font-size: 18px; font-weight: 800; color: #F9FAFB;">
-                                <span style="color: {badge_color}; margin-right: 6px;">{i+1}위.</span> {item_name}
-                            </div>
-                            <div style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700;">
-                                불합격 {count}건 ({share}%)
-                            </div>
-                        </div>
-                        <div style="font-size: 14px; color: #D1D5DB; margin-bottom: 6px; line-height: 1.5;">
-                            <strong style="color: #FBBF24;">▪ 주요 원인:</strong> {guide['cause']}
-                        </div>
-                        <div style="font-size: 14px; color: #E5E7EB; line-height: 1.6;">
-                            <strong style="color: #34D399;">▪ 개선 대책:</strong> {guide['action']}
-                        </div>
-                    </div>
-                    """
-                
-                guide_cards_html += '</div>'
-                st.markdown(guide_cards_html, unsafe_allow_html=True)
+                    # 공백(들여쓰기) 없이 왼쪽 끝에 붙여 작성하여 마크다운 코드블록 오인 방지
+                    card_html = (
+                        f'<div style="background: #1F2937; border: 1px solid #374151; border-left: 6px solid {badge_color}; '
+                        f'border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;">'
+                        f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">'
+                        f'<div style="font-size: 18px; font-weight: 800; color: #F9FAFB;">'
+                        f'<span style="color: {badge_color}; margin-right: 6px;">{i+1}위.</span> {item_name}</div>'
+                        f'<div style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 4px 12px; '
+                        f'border-radius: 20px; font-size: 13px; font-weight: 700;">불합격 {count}건 ({share}%)</div></div>'
+                        f'<div style="font-size: 14px; color: #D1D5DB; margin-bottom: 6px; line-height: 1.5;">'
+                        f'<strong style="color: #FBBF24;">▪ 주요 원인:</strong> {guide["cause"]}</div>'
+                        f'<div style="font-size: 14px; color: #E5E7EB; line-height: 1.6;">'
+                        f'<strong style="color: #34D399;">▪ 개선 대책:</strong> {guide["action"]}</div>'
+                        f'</div>'
+                    )
+                    st.markdown(card_html, unsafe_allow_html=True)
 
             else:
                 st.success("불합격 데이터가 존재하지 않습니다.")
