@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import textwrap
 from supabase import create_client, Client
 
 # 1. 페이지 기본 설정
@@ -22,6 +23,14 @@ def init_supabase():
         return None
 
 supabase = init_supabase()
+
+# 긴 업체명 2줄 자동 줄바꿈 헬퍼 함수
+def wrap_company_name(name, width=14):
+    name_str = str(name).strip()
+    if len(name_str) > width:
+        lines = textwrap.wrap(name_str, width=width)
+        return "<br>".join(lines[:2]) + ("..." if len(lines) > 2 else "")
+    return name_str
 
 # 3. 사이드바
 with st.sidebar:
@@ -45,10 +54,12 @@ if uploaded_file is not None:
         
         total_rows = len(df)
         
+        # 컬럼 자동 매칭
         status_col = next((c for c in df.columns if any(k in str(c).lower() for k in ['판정', 'result', 'status', '합격'])), df.columns[0])
         reason_col = next((c for c in df.columns if any(k in str(c).lower() for k in ['시험항목', '사유', '불합격', '항목', 'reason', 'fail'])), df.columns[1] if len(df.columns) > 1 else df.columns[0])
         company_col = next((c for c in df.columns if any(k in str(c).lower() for k in ['업체', '신청인', '협력사', 'client', 'company'])), df.columns[2] if len(df.columns) > 2 else df.columns[0])
 
+        # 불합격 데이터 추출
         fail_keywords = ['불합격', 'fail', '不合格', 'x', 'n', '부적합']
         mask = df[status_col].astype(str).str.lower().apply(lambda x: any(kw in x for kw in fail_keywords))
         df_fail = df[mask].copy()
@@ -57,15 +68,18 @@ if uploaded_file is not None:
         pass_count = total_rows - fail_count
         fail_rate = (fail_count / total_rows * 100) if total_rows > 0 else 0
         
+        # 텍스트 자동 정제
         df_fail[reason_col] = df_fail[reason_col].astype(str) \
             .str.replace('일광견뢰도 : 제논아크법', '일광견뢰도', regex=False) \
             .str.replace('폼알데하이드 함유량=본원', '폼알데하이드', regex=False) \
             .str.replace('납(Pb) 함유량=본원', '납(Pb) 함유량', regex=False)
         df_fail[company_col] = df_fail[company_col].astype(str)
 
-        tab1, tab2, tab3 = st.tabs(["📊 1. 불합격 항목 분석", "🏢 2. 신청업체별 불합격 항목", "📋 3. 상세원본데이터"])
+        # 메인 분석 탭과 원본 데이터 탭으로 깔끔하게 통합 구성
+        tab1, tab2 = st.tabs(["📊 1. 불합격 종합 분석 (항목 및 업체별)", "📋 2. 상세원본데이터"])
         
         with tab1:
+            # --- 상단 KPI 카드 ---
             st.markdown(f"""
             <div style="display: flex; gap: 20px; margin-bottom: 40px;">
                 <div style="flex: 1; background: #1F2937; padding: 25px; border-radius: 12px; border: 1px solid #374151; border-left: 6px solid #3B82F6;">
@@ -92,6 +106,7 @@ if uploaded_file is not None:
                 fail_summary.columns = ['불합격 항목', '발생 건수']
                 fail_summary['점유율(%)'] = (fail_summary['발생 건수'] / fail_count * 100).round(1)
 
+                # 5% 이하 '기타' 병합 및 정렬
                 cond_others = fail_summary['점유율(%)'] <= 5.0
                 if cond_others.any():
                     others_count = fail_summary.loc[cond_others, '발생 건수'].sum()
@@ -102,17 +117,18 @@ if uploaded_file is not None:
                 else:
                     fail_summary_pie = fail_summary.sort_values('발생 건수', ascending=False)
 
-                premium_colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316', '#14B8A6']
+                premium_colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316', '#14B8A6', '#6366F1']
                 unique_items = fail_summary_pie['불합격 항목'].tolist()
                 color_map = {item: premium_colors[i % len(premium_colors)] for i, item in enumerate(unique_items) if item != '기타'}
                 color_map['기타'] = '#4B5563'
 
+                # ==========================================
+                # 1-1. 불합격 항목별 점유율 (도너츠 차트)
+                # ==========================================
                 st.markdown("### 📊 불합격 항목별 점유율")
+                col_left1, _ = st.columns([2.2, 0.8])
                 
-                # 도너츠 차트 + 우측 범례가 넉넉히 들어가도록 비율 조정
-                col_left, col_right = st.columns([2, 1])
-                
-                with col_left:
+                with col_left1:
                     fig_pie = px.pie(
                         fail_summary_pie, 
                         names='불합격 항목', 
@@ -133,7 +149,6 @@ if uploaded_file is not None:
                         paper_bgcolor='rgba(0,0,0,0)',
                         plot_bgcolor='rgba(0,0,0,0)',
                         title=None,
-                        # ★ 범례를 도너츠 오른쪽 중앙에 세로로 깔끔하게 배치
                         legend=dict(
                             orientation="v",       
                             yanchor="middle", y=0.5, 
@@ -142,26 +157,33 @@ if uploaded_file is not None:
                             itemsizing="constant",
                             tracegroupgap=10
                         ),
-                        margin=dict(t=20, b=20, l=0, r=180), 
+                        margin=dict(t=20, b=20, l=0, r=200), 
                         height=550
                     )
                     st.plotly_chart(fig_pie, use_container_width=True)
 
                 st.divider()
 
-                st.markdown("### 📈 주요 불합격 빈도 순위 (Top 10)")
+                # ==========================================
+                # 1-2. 주요 불합격 빈도 순위 (1번 최다 ~ 10번 최소)
+                # ==========================================
+                st.markdown("### 📈 주요 불합격 빈도 순위 (1위 ~ 10위)")
                 
-                # ★ 가장 많은 항목부터 위에서 아래로 나오도록 정렬 및 autorange="reversed" 적용
-                top10_reasons = fail_summary.head(10).sort_values('발생 건수', ascending=False)
+                top10_reasons = fail_summary.head(10).sort_values('발생 건수', ascending=False).reset_index(drop=True)
+                # 1번부터 10번까지 명확히 순위 넘버링 부여
+                top10_reasons['순위_항목'] = [f"{i+1}. {row['불합격 항목']}" for i, row in top10_reasons.iterrows()]
+                
+                # 색상 매칭을 위해 순위_항목 기준 컬러맵 생성
+                bar_color_map = {f"{i+1}. {row['불합격 항목']}": color_map.get(row['불합격 항목'], '#3B82F6') for i, row in top10_reasons.iterrows()}
                 
                 fig_bar = px.bar(
                     top10_reasons, 
                     x='발생 건수', 
-                    y='불합격 항목', 
+                    y='순위_항목', 
                     orientation='h',
                     text='발생 건수',
-                    color='불합격 항목',
-                    color_discrete_map=color_map
+                    color='순위_항목',
+                    color_discrete_map=bar_color_map
                 )
                 fig_bar.update_traces(
                     textfont=dict(size=18, color="#F9FAFB", family="Arial Black"), 
@@ -175,49 +197,67 @@ if uploaded_file is not None:
                     xaxis_title="",
                     yaxis_title="",
                     yaxis=dict(
-                        autorange="reversed", # ★ 1위(최다 발생)가 맨 위에 오도록 고정
+                        categoryorder="array",
+                        categoryarray=top10_reasons['순위_항목'].tolist()[::-1], # ★ 1번이 맨 위, 10번이 맨 아래 오도록 강제 고정
                         tickfont=dict(size=18, color="#F9FAFB")
                     ),
-                    margin=dict(t=20, b=20, l=10, r=50),
+                    margin=dict(t=20, b=20, l=10, r=60),
                     height=600
                 )
                 st.plotly_chart(fig_bar, use_container_width=True)
 
-        with tab2:
-            st.markdown("#### 🏢 신청업체별 불합격 발생 현황")
-            if fail_count > 0:
-                company_fails = df_fail.groupby(company_col).size().reset_index(name='불합격 건수')
-                company_fails = company_fails.sort_values('불합격 건수', ascending=False)
-                
-                # ★ 상위 6개 업체만 표시하도록 변경
-                st.markdown("##### 📈 주요 불합격 발생 업체 (Top 6)")
-                top6_fails = company_fails.head(6)
-                
-                fig_comp = px.bar(
-                    top6_fails, 
-                    x=company_col, 
-                    y='불합격 건수',
-                    text='불합격 건수',
-                    color='불합격 건수',
-                    color_continuous_scale='Blues'
-                )
-                fig_comp.update_traces(textposition='outside', textfont=dict(size=18, color='#F9FAFB', family="Arial Black"))
-                fig_comp.update_layout(
-                    template='plotly_dark',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis_title="", 
-                    yaxis_title="불합격 발생 건수",
-                    xaxis=dict(tickfont=dict(size=16, color="#F9FAFB")),
-                    coloraxis_showscale=False,
-                    margin=dict(t=30, b=20, l=20, r=20),
-                    height=500
-                )
-                st.plotly_chart(fig_comp, use_container_width=True)
-                
                 st.divider()
+
+                # ==========================================
+                # 1-3. 신청업체별 불합격 항목 (하단 통합 + Top 10 도너츠 + 2줄 줄바꿈)
+                # ==========================================
+                st.markdown("### 🏢 신청업체별 불합격 발생 현황 (Top 10)")
                 
-                st.markdown("##### 🔍 업체명 검색 및 사유별 상세 내역")
+                company_fails = df_fail.groupby(company_col).size().reset_index(name='불합격 건수')
+                company_fails = company_fails.sort_values('불합격 건수', ascending=False).reset_index(drop=True)
+                
+                top10_comp = company_fails.head(10).copy()
+                # 긴 업체명 2줄 자동 줄바꿈 적용
+                top10_comp['표시_업체명'] = top10_comp[company_col].apply(lambda x: wrap_company_name(x, width=14))
+                
+                col_left2, _ = st.columns([2.2, 0.8])
+                
+                with col_left2:
+                    fig_comp_pie = px.pie(
+                        top10_comp,
+                        names='표시_업체명',
+                        values='불합격 건수',
+                        hole=0.5,
+                        color_discrete_sequence=premium_colors
+                    )
+                    fig_comp_pie.update_traces(
+                        textposition='inside',
+                        textinfo='percent+value', # 도너츠 안에는 깔끔하게 비율과 건수 표시
+                        textfont=dict(size=16, color='white', family="Arial Black"),
+                        marker=dict(line=dict(color='#0E1117', width=2)),
+                        sort=False
+                    )
+                    fig_comp_pie.update_layout(
+                        template='plotly_dark',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        title=None,
+                        # ★ 도너츠 오른쪽에 2줄 처리된 업체명 세로 배치
+                        legend=dict(
+                            orientation="v",
+                            yanchor="middle", y=0.5,
+                            xanchor="left", x=1.02,
+                            font=dict(size=18, color="#F9FAFB"),
+                            itemsizing="constant",
+                            tracegroupgap=12
+                        ),
+                        margin=dict(t=20, b=20, l=0, r=240),
+                        height=620
+                    )
+                    st.plotly_chart(fig_comp_pie, use_container_width=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("#### 🔍 업체명 검색 및 사유별 상세 내역")
                 search_term = st.text_input("찾으시는 업체명을 입력하세요 (일부만 입력해도 검색됩니다) 🔎", "")
                 
                 if search_term:
@@ -233,7 +273,10 @@ if uploaded_file is not None:
             else:
                 st.success("불합격 데이터가 존재하지 않습니다.")
 
-        with tab3:
+        # ==========================================
+        # TAB 2: 상세원본데이터
+        # ==========================================
+        with tab2:
             st.markdown("#### 📂 엑셀 원본 전체 데이터")
             st.dataframe(df, use_container_width=True, height=700)
 
